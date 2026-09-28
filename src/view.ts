@@ -1,0 +1,230 @@
+import { ItemView, Notice, TFile, WorkspaceLeaf, normalizePath, type App } from "obsidian";
+import { appendLine, ensureTodayNote, todayPath } from "./daily";
+import type { HomeSettings, QuickLink } from "./settings";
+
+export const HOME_VIEW_TYPE = "obsidian-home-dashboard";
+
+const taskRe = /^(\s*[-*+])\s+\[( |x|X)\]\s?(.*)$/;
+
+/** Find the line range (start..end indices) of the first `## title` / `# title` section. */
+function findSection(content: string, title: string): { start: number; end: number } | null {
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^#{1,2}\s/.test(lines[i])) continue;
+    if (lines[i].replace(/^#+\s*/, "").trim() !== title) continue;
+    let end = lines.length;
+    for (let j = i + 1; j < lines.length; j++) if (/^#{1,2}\s/.test(lines[j])) { end = j; break; }
+    return { start: i, end };
+  }
+  return null;
+}
+
+export class HomeView extends ItemView {
+  private searchEl!: HTMLInputElement;
+  private todoEl!: HTMLElement;
+  private recentEl!: HTMLElement;
+  private quickEl!: HTMLElement;
+
+  constructor(
+    leaf: WorkspaceLeaf,
+    private getSettings: () => HomeSettings,
+  ) {
+    super(leaf);
+  }
+
+  getViewType(): string { return HOME_VIEW_TYPE; }
+  getDisplayText(): string { return "首页工作台"; }
+  getIcon(): string { return "house"; }
+
+  async onOpen(): Promise<void> {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("ohd-home");
+
+    // Top: search bar
+    const head = contentEl.createDiv({ cls: "ohd-head" });
+    head.createSpan({ cls: "ohd-logo", text: "🏠" });
+    this.searchEl = head.createEl("input", {
+      type: "text", cls: "ohd-search",
+      attr: { placeholder: "搜笔记  Enter；Shift+Enter 记今日待办" },
+    });
+    this.searchEl.addEventListener("keydown", (e) => void this.onSearchKey(e));
+
+    // Pillar nav
+    const nav = contentEl.createDiv({ cls: "ohd-nav" });
+    for (const [label, path] of [["健康", "10-健康"], ["生活", "20-生活"], ["价值", "30-价值"]] as const) {
+      const b = nav.createEl("button", { cls: "ohd-pill", text: label });
+      b.addEventListener("click", () => this.openNote(path));
+    }
+
+    // Recent notes
+    const recent = contentEl.createDiv({ cls: "ohd-section" });
+    recent.createEl("div", { cls: "ohd-h2", text: "最近笔记" });
+    this.recentEl = recent.createDiv({ cls: "ohd-list" });
+
+    // Quick links
+    const quick = contentEl.createDiv({ cls: "ohd-section" });
+    quick.createEl("div", { cls: "ohd-h2", text: "快捷入口" });
+    this.quickEl = quick.createDiv({ cls: "ohd-chips" });
+
+    // Today's todos
+    const todo = contentEl.createDiv({ cls: "ohd-section" });
+    const todoHead = todo.createDiv({ cls: "ohd-h2" });
+    todoHead.createSpan({ text: "今日待办" });
+    todoHead.createEl("button", { cls: "ohd-mini", text: "＋" }).addEventListener("click", () => void this.addTodoPrompt());
+    todoHead.createEl("button", { cls: "ohd-mini", text: "📄" }).addEventListener("click", () => void this.openTodayNote());
+    this.todoEl = todo.createDiv({ cls: "ohd-todo" });
+
+    // Live updates
+    this.registerEvent(this.app.vault.on("modify", () => void this.renderTodo()));
+    this.registerEvent(this.app.vault.on("create", () => void this.renderRecent()));
+    this.registerEvent(this.app.workspace.on("layout-change", () => void this.renderRecent()));
+
+    // Initial render
+    await this.renderAll();
+  }
+
+  async onClose(): Promise<void> { this.contentEl.empty(); }
+
+  /** Re-render the whole body. Called when the plugin re-reads settings. */
+  async renderAll(): Promise<void> {
+    const s = this.getSettings();
+    this.renderQuick(s.quickLinks);
+    await Promise.all([this.renderRecent(), this.renderTodo()]);
+  }
+
+  /** Focus the search bar (used by the "capture" command). */
+  focusSearch(): void {
+    if (this.searchEl) { this.searchEl.focus(); this.searchEl.select(); }
+  }
+
+  private async renderRecent(): Promise<void> {
+    const s = this.getSettings();
+    const files = this.app.vault.getMarkdownFiles()
+      .filter((f) => !f.path.startsWith(".obsidian") && !f.path.startsWith("Daily/"))
+      .sort((a, b) => b.stat.mtime - a.stat.mtime)
+      .slice(0, s.recentCount);
+    this.recentEl.empty();
+    for (const file of files) {
+      const row = this.recentEl.createDiv({ cls: "ohd-row" });
+      const name = file.basename;
+      const dir = file.parent?.path && file.parent.path !== "/" ? file.parent.path : "";
+      row.createSpan({ cls: "ohd-fname", text: name });
+      row.createSpan({ cls: "ohd-fpath", text: dir });
+      row.addEventListener("click", () => void this.openPathSafe(file.path));
+    }
+  }
+
+  private renderQuick(links: QuickLink[]): void {
+    this.quickEl.empty();
+    for (const link of links) {
+      const chip = this.quickEl.createEl("button", { cls: "ohd-chip", text: `${link.label} → ${link.target}` });
+      chip.addEventListener("click", () => void this.openTarget(link.target));
+    }
+  }
+
+  private async renderTodo(): Promise<void> {
+    const path = await todayPath(this.app);
+    const file = this.app.vault.getAbstractFileByPath(path);
+    if (!(file instanceof TFile)) {
+      this.todoEl.empty();
+      this.todoEl.createSpan({ cls: "ohd-hint", text: "今天还没有待办。用上面的 ＋ 或 Shift+Enter 记一条。" });
+      return;
+    }
+    const content = await this.app.vault.read(file);
+    const lines = content.split("\n");
+    const open: Array<{ i: number; text: string }> = [];
+    for (let i = 0; i < lines.length; i++) {
+      const m = taskRe.exec(lines[i]);
+      if (m && m[2] !== "x" && m[2] !== "X") open.push({ i, text: m[3] });
+    }
+    this.todoEl.empty();
+    if (open.length === 0) {
+      this.todoEl.createSpan({ cls: "ohd-hint", text: "全部完成！🎉" });
+      return;
+    }
+    for (const t of open) {
+      const row = this.todoEl.createDiv({ cls: "ohd-row" });
+      const box = row.createEl("input", { type: "checkbox", cls: "ohd-check" });
+      box.addEventListener("change", () => void this.toggleTodo(file, t.i, true));
+      row.createSpan({ cls: "ohd-fname", text: t.text });
+    }
+  }
+
+  /** Flip a task at line index in the daily note; also honour unchecked→checked write-back. */
+  private async toggleTodo(file: TFile, lineIndex: number, done: boolean): Promise<void> {
+    await this.app.vault.process(file, (c) => {
+      const lines = c.split("\n");
+      if (lineIndex < 0 || lineIndex >= lines.length) return c;
+      const m = taskRe.exec(lines[lineIndex]);
+      if (!m) return c;
+      // preserve indent & bullet; only flip checkbox
+      const mark = done ? "x" : " ";
+      lines[lineIndex] = `${m[1]} [${mark}] ${m[3]}`;
+      return lines.join("\n");
+    });
+    void this.renderTodo();
+  }
+
+  private async openNote(path: string): Promise<void> {
+    await this.openPathSafe(path);
+  }
+  private async openPathSafe(path: string): Promise<void> {
+    const file = this.app.vault.getAbstractFileByPath(normalizePath(path));
+    if (file instanceof TFile) await this.app.workspace.getLeaf().openFile(file);
+    else new Notice(`找不到：${path}`);
+  }
+  private async openTodayNote(): Promise<void> {
+    const file = await ensureTodayNote(this.app);
+    await this.app.workspace.getLeaf().openFile(file, { active: true });
+  }
+
+  private async addTodoPrompt(): Promise<void> {
+    const text = prompt("今日待办", "");
+    if (!text || !text.trim()) return;
+    await this.addTodoWrite(text);
+  }
+  private async addTodoWrite(text: string): Promise<void> {
+    const file = await ensureTodayNote(this.app);
+    await appendLine(this.app, file, `- [ ] ${text.trim()}`);
+    void this.renderTodo();
+    new Notice("已记入今日待办");
+  }
+
+  private async openTarget(target: string): Promise<void> {
+    const t = target.trim();
+    if (t.startsWith("command:")) {
+      const cmd = t.slice("command:".length);
+      // executeObsidianCommand
+      (this.app as unknown as { commands?: Record<string, unknown> }).commands;
+      await (this.app as unknown as App & { commands: Record<string, () => void> }).commands[cmd]?.();
+      return;
+    }
+    if (/^(https?|obsidian):\/\//i.test(t)) {
+      window.open(t);
+      return;
+    }
+    // note / folder
+    await this.openPathSafe(t);
+  }
+
+  private async onSearchKey(e: KeyboardEvent): Promise<void> {
+    const q = this.searchEl.value.trim();
+    if (e.key !== "Enter" || !q) return;
+    if (e.shiftKey) {
+      await this.addTodoWrite(q);
+      this.searchEl.value = "";
+      return;
+    }
+    const file = this.app.vault.getAbstractFileByPath(normalizePath(q));
+    if (file instanceof TFile) {
+      await this.app.workspace.getLeaf().openFile(file);
+      this.searchEl.value = "";
+      return;
+    }
+    const leaf = this.app.workspace.getLeaf("tab");
+    await leaf.setViewState({ type: "search", state: { query: q } });
+    this.searchEl.value = "";
+    new Notice(`未找到“${q}”，已打开全局搜索`);
+  }
+}

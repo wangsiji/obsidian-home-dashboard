@@ -1,0 +1,18 @@
+{
+	"name": "obsidian-home-dashboard",
+	"version": "0.1.0",
+	"description": "把 Obsidian 变成命令中枢的首页工作台：今日待办、最近笔记、快捷入口、三支柱导航、搜索。",
+	"license": "GPL-3.0-only",
+	"private": true,
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc --noEmit && node esbuild.config.mjs production",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.0",
+		"esbuild": "^0.24.0",
+		"obsidian": "^1.6.0",
+		"typescript": "^5.4.0"
+	}
+}

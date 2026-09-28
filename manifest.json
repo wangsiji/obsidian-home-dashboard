@@ -1,0 +1,10 @@
+{
+	"id": "obsidian-home-dashboard",
+	"name": "Home Dashboard",
+	"version": "0.1.0",
+	"minAppVersion": "1.4.0",
+	"description": "一个把 Obsidian 变命令中枢的首页工作台：今日待办、最近笔记、快捷入口、三支柱导航、全局搜索。",
+	"author": "wangsiji",
+	"authorUrl": "https://github.com/wangsiji",
+	"isDesktopOnly": false
+}

@@ -1,62 +1,53 @@
 # Obsidian Home Dashboard
 
-一个**把 Obsidian Vault 变成一个"命令中枢"**的可复用首页工作台模板。打开 Obsidian 第一眼看到的是今天的任务、在走的所有、最近动过的笔记——而不是昨天随手关掉的那页。
+一个把 Obsidian 变成**命令中枢**的首页工作台。提供两种形态：
 
-以社区成熟的 **Dataview + Tasks + CSS grid** 范式搭建：数据自动填充，不手维护链接；一刀屏能扫完，防腐烂。
+- **① Obsidian 插件（仓库当前形态）**：`Home Dashboard`，一个专属首页页签。
+- **② Markdown 模板（零依赖兜底）**：`templates/` 下的 `Home.md` / `Home-simple.md`。
 
-## 特性
+---
 
-- **双档可选**
-  - `Home.md` — 数据驱动版（需 Dataview）：今日任务、未来7天、进行中项目、最近编辑、库统计，自动填充
-  - `Home-simple.md` — 零插件静态版：手维护，开箱即用，适合不装 Dataview 的小库
-- **多栏卡片布局** — `cssclasses: dashboard` + 一个 snippet，网格自适应到窄屏单列
-- **任务语义** — 用 Tasks 插件读 📅 截止 / 🔁 循环，做今天的议程最自然
-- **参数化适配** — 查询里的文件夹名/tag 集中在一处可改，不用懂 Dataview 语法也能换结构
-- **抗腐烂** — 一刀屏就够；块不堆多。详见 [设计原则](docs/setup.md#设计原则)
+## ① 插件：Home Dashboard
 
-## 快速开始（2 分钟）
+一个真正的 Obsidian 插件：新建「首页工作台」视图，打开 Obsidian 第一眼是今天的待办和常用入口，而不是昨天随手关掉的那页。
 
-1. **复制文件**：把 `templates/Home.md`（或 `Home-simple.md`）和 `.obsidian/snippets/dashboard.css` 拷进你的 Vault。
-2. **启用样式**：Obsidian 设置 → 外观 → CSS 代码片段 → 启用 `dashboard`。
-3. **装插件**（动态版需要）：[Dataview](https://github.com/blacksmithgu/obsidian-dataview) 打开；任务用 [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks)。
-4. **设置启动页**：装 [Homepage](https://github.com/mirnovov/obsidian-homepage) 插件，指向 `Home`（设为启动打开、强制阅读视图）。
-5. **改文件夹名**：把查询里的文件夹/tag 换成你自己的（README 末尾注释标了「改这里」）。
+### 五个核心块
 
-> 想要「今日焦点」提醒？把下面这行写进你的日记模板，每天自动对齐：
-> ```markdown
-> ## 今日焦点
-> - [ ] （今天推进最重要的一件事）[due:: 今天]
-> ```
+| 块 | 作用 |
+| --- | --- |
+| 🔍 **搜索** | 输入 → `Enter` 打开匹配笔记，否则落全局搜索；`Shift+Enter` 把输入记成今日待办 |
+| ✅ **今日待办** | 读今日日记里的 `- [ ]`，勾选即写回；`＋` 或 `Shift+Enter` 追加一条 |
+| 🕐 **最近笔记** | 最近修改的 N 条笔记，点击直达 |
+| 📁 **三支柱导航** | 健康 / 生活 / 价值 一键跳转 |
+| ⚡ **快捷入口** | 可配置的笔记 / 文件夹 / 命令 / 链接入口 |
 
-## 项目结构
+今日待办默认写入 `Daily/<今天>.md`（跟随 Obsidian「每日笔记」的目录/格式/模板；未配置时用 `Daily/` + `YYYYMMDD`）。
 
-```text
-obsidian-home-dashboard/
-├── README.md                # 本文件
-├── LICENSE
-├── templates/
-│   ├── Home.md               # Dataview 数据驱动版（推荐）
-│   └── Home-simple.md        # 零插件静态版（兜底）
-├── .obsidian/snippets/
-│   └── dashboard.css         # 多栏卡片布局
-└── docs/
-    └── setup.md              # 插件安装+配置+改文件夹 分步指南
+### 安装
+
+1. 把 `main.js`、`styles.css`、`manifest.json` 复制到 `.obsidian/plugins/obsidian-home-dashboard/`。
+2. 在 **设置 → 第三方插件 → 已安装** 里**启用** Home Dashboard。
+3. 命令面板运行「打开首页工作台」，或点左侧 🏠。
+
+> 启用后默认接管空白新标签页、启动自动打开（均可设置关闭）。
+
+### 开发
+
+```bash
+npm install
+node esbuild.config.mjs production   # 产物: main.js
 ```
 
-## 依赖
+## ② 模板（可选）
 
-| 能力 | 必备插件 | 版本 |
-| --- | --- | --- |
-| 数据驱动（`Home.md`） | Dataview | 需启用 JS 查询 |
-| 任务聚合（今日/未来7天） | Tasks | 可选但不装则这两块空 |
-| 启动自动打开/强阅读 | Homepage | 可选，推荐 |
+| 文件 | 说明 |
+| --- | --- |
+| `templates/Home.md` | Dataview 数据驱动版：今日任务、未来7天、项目、最近、统计 |
+| `templates/Home-simple.md` | 零插件静态版：手维护，兜底 |
+| `.obsidian/snippets/dashboard.css` | `cssclasses: dashboard` 多栏布局 |
 
-`Home-simple.md` 不需要任何插件，纯手维护即可跑。
-
-## 从旧首页迁移
-
-已有 `index.md`/`Dashboard.md` 当首页了？——本 template 默认**不碰已有的**，直接增一份新 `Home`。想替换：先备份旧首页 → 把 `Home.md` 改名成 `index.md`（或 Dashboard）→ 再按需合并你想保留的旧链接区块。
+详见 [docs/setup.md](docs/setup.md)。
 
 ## License
 
-MIT License（详见 [LICENSE](LICENSE)）。
+MIT License（见 [LICENSE](LICENSE)）。
