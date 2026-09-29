@@ -11,6 +11,7 @@ export interface HomeSettings {
   recentCount: number;
   quickLinks: QuickLink[];
   dailyFolder: string;
+  blocks: Record<string, boolean>;
 }
 
 export const DEFAULT: HomeSettings = {
@@ -24,6 +25,7 @@ export const DEFAULT: HomeSettings = {
     { label: "🧠 常识", target: "03-Resources" },
   ],
   dailyFolder: "Daily",
+  blocks: { search: true, quick: true, recent: true, todo: true, backlog: true, board: true },
 };
 
 export function normalize(data: unknown): HomeSettings {
@@ -33,6 +35,7 @@ export function normalize(data: unknown): HomeSettings {
     ? s.quickLinks.filter((q) => q && typeof q.label === "string" && typeof q.target === "string")
     : [...DEFAULT.quickLinks];
   s.dailyFolder = s.dailyFolder?.trim() || "Daily";
+  s.blocks = { ...DEFAULT.blocks, ...(s.blocks && typeof s.blocks === "object" ? s.blocks : {}) };
   return s;
 }
 
@@ -79,8 +82,23 @@ export class HomeSettingTab extends PluginSettingTab {
       .addSlider((sl) => sl.setLimits(3, 20, 1).setValue(this.get().recentCount).setDynamicTooltip()
         .onChange((v) => { this.get().recentCount = v; this.save(); }));
     new Setting(containerEl).setName("待办写入文件夹").setDesc("未配置每日笔记时，今日待办写入目录（默认 Daily/）")
-      .addText((t) => t.setPlaceholder("Daily").setValue(this.get().dailyFolder)
-        .onChange((v) => { this.get().dailyFolder = v.trim() || "Daily"; this.save(); }));
+          .addText((t) => t.setPlaceholder("Daily").setValue(this.get().dailyFolder)
+            .onChange((v) => { this.get().dailyFolder = v.trim() || "Daily"; this.save(); }));
+
+        containerEl.createEl("h3", { text: "显示区块（可插拔）" });
+        const blockMeta: Array<[string, string]> = [
+          ["search", "搜索栏"],
+          ["quick", "快捷面板"],
+          ["recent", "最近笔记"],
+          ["todo", "今日待办"],
+          ["backlog", "未完成任务（全库）"],
+          ["board", "全景看板"],
+        ];
+        for (const [key, label] of blockMeta) {
+          new Setting(containerEl).setName(label)
+            .addToggle((t) => t.setValue(this.get().blocks[key] !== false)
+              .onChange((v) => { this.get().blocks[key] = v; this.save(); }));
+        }
 
     containerEl.createEl("h3", { text: "快捷入口" });
     containerEl.createEl("p", { text: "target：笔记/文件夹路径、command:命令ID、http(s):// 或 obsidian://。点名称或目标可编辑。", cls: "setting-item-description" });

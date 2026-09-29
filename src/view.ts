@@ -21,12 +21,12 @@ function findSection(content: string, title: string): { start: number; end: numb
 }
 
 export class HomeView extends ItemView {
-  private searchEl!: HTMLInputElement;
-  private todoEl!: HTMLElement;
-  private backlogEl!: HTMLElement;
-  private recentEl!: HTMLElement;
-  private quickEl!: HTMLElement;
-  private boardEl!: HTMLElement;
+  private searchEl?: HTMLInputElement;
+  private todoEl?: HTMLElement;
+  private backlogEl?: HTMLElement;
+  private recentEl?: HTMLElement;
+  private quickEl?: HTMLElement;
+  private boardEl?: HTMLElement;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -44,55 +44,71 @@ export class HomeView extends ItemView {
     contentEl.empty();
     contentEl.addClass("ohd-home");
 
-    // Top: search bar
-    const head = contentEl.createDiv({ cls: "ohd-head" });
-    head.createSpan({ cls: "ohd-logo", text: "🏠" });
-    this.searchEl = head.createEl("input", {
-      type: "text", cls: "ohd-search",
-      attr: { placeholder: "搜笔记  Enter；Shift+Enter 记今日待办" },
-    });
-    this.searchEl.addEventListener("keydown", (e) => void this.onSearchKey(e));
+    const b = (k: string) => this.getSettings().blocks[k] !== false;
 
-    // Pillar nav
-    const nav = contentEl.createDiv({ cls: "ohd-nav" });
-    for (const [label, path] of [["健康", "10-健康"], ["生活", "20-生活"], ["价值", "30-价值"]] as const) {
-      const b = nav.createEl("button", { cls: "ohd-pill", text: label });
-      b.addEventListener("click", () => this.openNote(path));
+    // Top: search bar
+    if (b("search")) {
+      const head = contentEl.createDiv({ cls: "ohd-head" });
+      head.createSpan({ cls: "ohd-logo", text: "🏠" });
+      this.searchEl = head.createEl("input", {
+        type: "text", cls: "ohd-search",
+        attr: { placeholder: "搜笔记  Enter；Shift+Enter 记今日待办" },
+      });
+      this.searchEl.addEventListener("keydown", (e) => void this.onSearchKey(e));
+    }
+
+    // Pillar nav（跟随 search：三支柱导航是搜索的走查入口）
+    if (b("search")) {
+      const nav = contentEl.createDiv({ cls: "ohd-nav" });
+      for (const [label, path] of [["健康", "10-健康"], ["生活", "20-生活"], ["价值", "30-价值"]] as const) {
+        const bk = nav.createEl("button", { cls: "ohd-pill", text: label });
+        bk.addEventListener("click", () => this.openNote(path));
+      }
     }
 
     // Recent notes
-    const recent = contentEl.createDiv({ cls: "ohd-section" });
-    recent.createEl("div", { cls: "ohd-h2", text: "最近笔记" });
-    this.recentEl = recent.createDiv({ cls: "ohd-list" });
+    if (b("recent")) {
+      const recent = contentEl.createDiv({ cls: "ohd-section" });
+      recent.createEl("div", { cls: "ohd-h2", text: "最近笔记" });
+      this.recentEl = recent.createDiv({ cls: "ohd-list" });
+    }
 
     // Quick links (原 Script-GlobalBoard 快捷面板)
+    if (b("quick")) {
       const quick = contentEl.createDiv({ cls: "ohd-section" });
       quick.createEl("div", { cls: "ohd-h2", text: "快捷面板" });
       this.quickEl = quick.createDiv({ cls: "ohd-chips" });
+    }
 
     // Today's todos
-    const todo = contentEl.createDiv({ cls: "ohd-section" });
-    const todoHead = todo.createDiv({ cls: "ohd-h2" });
-    todoHead.createSpan({ text: "今日待办" });
-    todoHead.createEl("button", { cls: "ohd-mini", text: "＋" }).addEventListener("click", () => void this.addTodoPrompt());
-    todoHead.createEl("button", { cls: "ohd-mini", text: "📄" }).addEventListener("click", () => void this.openTodayNote());
-    this.todoEl = todo.createDiv({ cls: "ohd-todo" });
+    if (b("todo")) {
+      const todo = contentEl.createDiv({ cls: "ohd-section" });
+      const todoHead = todo.createDiv({ cls: "ohd-h2" });
+      todoHead.createSpan({ text: "今日待办" });
+      todoHead.createEl("button", { cls: "ohd-mini", text: "＋" }).addEventListener("click", () => void this.addTodoPrompt());
+      todoHead.createEl("button", { cls: "ohd-mini", text: "📄" }).addEventListener("click", () => void this.openTodayNote());
+      this.todoEl = todo.createDiv({ cls: "ohd-todo" });
+    }
 
     // Vault-wide backlog
-    const backlog = contentEl.createDiv({ cls: "ohd-section" });
-    backlog.createEl("div", { cls: "ohd-h2", text: "未完成任务 (全库)" });
-    this.backlogEl = backlog.createDiv({ cls: "ohd-todo" });
+    if (b("backlog")) {
+      const backlog = contentEl.createDiv({ cls: "ohd-section" });
+      backlog.createEl("div", { cls: "ohd-h2", text: "未完成任务 (全库)" });
+      this.backlogEl = backlog.createDiv({ cls: "ohd-todo" });
+    }
 
     // 全景看板 (原 Script-GlobalBoard 矩阵)
-    const board = contentEl.createDiv({ cls: "ohd-section ohd-board-section" });
-    const boardHead = board.createDiv({ cls: "ohd-h2" });
-    boardHead.createSpan({ text: "全景看板 · 主线×领域" });
-    boardHead.createEl("button", { cls: "ohd-mini", text: "🔄" }).addEventListener("click", () => void this.renderBoard());
-    this.boardEl = board.createDiv({ cls: "ohd-board" });
+    if (b("board")) {
+      const board = contentEl.createDiv({ cls: "ohd-section ohd-board-section" });
+      const boardHead = board.createDiv({ cls: "ohd-h2" });
+      boardHead.createSpan({ text: "全景看板 · 主线×领域" });
+      boardHead.createEl("button", { cls: "ohd-mini", text: "🔄" }).addEventListener("click", () => void this.renderBoard());
+      this.boardEl = board.createDiv({ cls: "ohd-board" });
+    }
 
     // Live updates
     this.registerEvent(this.app.vault.on("modify", () => void Promise.all([this.renderTodo(), this.renderBacklog(), this.renderBoard()])));
-    this.registerEvent(this.app.vault.on("create", () => void Promise.all([this.renderRecent(), this.renderBacklog(), this.renderBoard()])));
+    this.registerEvent(this.app.vault.on("create", () => void Promise.all([b("recent") ? this.renderRecent() : Promise.resolve(), this.renderBacklog(), this.renderBoard()])));
     this.registerEvent(this.app.workspace.on("layout-change", () => void this.renderRecent()));
 
     // Initial render
@@ -113,6 +129,7 @@ export class HomeView extends ItemView {
   }
 
   private async renderRecent(): Promise<void> {
+    if (!this.recentEl) return;
     const s = this.getSettings();
     const files = this.app.vault.getMarkdownFiles()
       .filter((f) => !f.path.startsWith(".obsidian") && !f.path.startsWith("Daily/"))
@@ -130,6 +147,7 @@ export class HomeView extends ItemView {
   }
 
   private renderQuick(): void {
+    if (!this.quickEl) return;
     this.quickEl.empty();
     const targets = quickTargets();
     for (const [label, target] of Object.entries(targets)) {
@@ -146,6 +164,7 @@ export class HomeView extends ItemView {
   }
 
   private async renderTodo(): Promise<void> {
+    if (!this.todoEl) return;
     const path = await todayPath(this.app);
     const file = this.app.vault.getAbstractFileByPath(path);
     if (!(file instanceof TFile)) {
@@ -207,6 +226,7 @@ export class HomeView extends ItemView {
 
   /** Render vault-wide unfinished tasks, grouped by top-level folder, capped for readability. */
   private async renderBacklog(): Promise<void> {
+    if (!this.backlogEl) return;
     const tasks = await this.getOpenTasks();
     this.backlogEl.empty();
     if (tasks.length === 0) {
@@ -241,6 +261,7 @@ export class HomeView extends ItemView {
 
   /** 渲染全景看板矩阵（buildBoard 全库采集 → HTML 注入 → 绑定跳转）。 */
   private async renderBoard(): Promise<void> {
+    if (!this.boardEl) return;
     this.boardEl.empty();
     this.boardEl.createSpan({ cls: "ohd-hint", text: "扫描中…" });
     try {
@@ -335,6 +356,7 @@ export class HomeView extends ItemView {
   }
 
   private async onSearchKey(e: KeyboardEvent): Promise<void> {
+    if (!this.searchEl) return;
     const q = this.searchEl.value.trim();
     if (e.key !== "Enter" || !q) return;
     if (e.shiftKey) {
