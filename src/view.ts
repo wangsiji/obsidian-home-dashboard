@@ -39,12 +39,32 @@ export class HomeView extends ItemView {
   getDisplayText(): string { return "首页工作台"; }
   getIcon(): string { return "house"; }
 
+  /** 按时段问候。 */
+  private greeting(): string {
+    const h = new Date().getHours();
+    if (h < 6) return "夜深了";
+    if (h < 9) return "早上好";
+    if (h < 12) return "上午好";
+    if (h < 14) return "中午好";
+    if (h < 18) return "下午好";
+    return "晚上好";
+  }
+
   async onOpen(): Promise<void> {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("ohd-home");
 
     const b = (k: string) => this.getSettings().blocks[k] !== false;
+
+    // Hero：问候 + 日期 + 周信息
+    const hero = contentEl.createDiv({ cls: "ohd-hero" });
+    const dateBox = hero.createDiv({ cls: "ohd-hero-date" });
+    dateBox.createDiv({ cls: "ohd-hero-greeting", text: this.greeting() });
+    const today = new Date();
+    const dateStr = today.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+    dateBox.createDiv({ cls: "ohd-hero-meta", text: dateStr });
+    hero.createDiv({ cls: "ohd-hero-tagline", text: "把注意力放回最重要的事。" });
 
     // Top: search bar
     if (b("search")) {
@@ -68,21 +88,28 @@ export class HomeView extends ItemView {
 
     // Recent notes
     if (b("recent")) {
-      const recent = contentEl.createDiv({ cls: "ohd-section" });
+      const recent = contentEl.createDiv({ cls: "ohd-section ohd-span-6" });
       recent.createEl("div", { cls: "ohd-h2", text: "最近笔记" });
       this.recentEl = recent.createDiv({ cls: "ohd-list" });
     }
 
+    // Vault-wide backlog
+    if (b("backlog")) {
+      const backlog = contentEl.createDiv({ cls: "ohd-section ohd-span-6" });
+      backlog.createEl("div", { cls: "ohd-h2", text: "未完成任务 (全库)" });
+      this.backlogEl = backlog.createDiv({ cls: "ohd-todo" });
+    }
+
     // Quick links (原 Script-GlobalBoard 快捷面板)
     if (b("quick")) {
-      const quick = contentEl.createDiv({ cls: "ohd-section" });
+      const quick = contentEl.createDiv({ cls: "ohd-section ohd-span-5" });
       quick.createEl("div", { cls: "ohd-h2", text: "快捷面板" });
       this.quickEl = quick.createDiv({ cls: "ohd-chips" });
     }
 
     // Today's todos
     if (b("todo")) {
-      const todo = contentEl.createDiv({ cls: "ohd-section" });
+      const todo = contentEl.createDiv({ cls: "ohd-section ohd-span-7" });
       const todoHead = todo.createDiv({ cls: "ohd-h2" });
       todoHead.createSpan({ text: "今日待办" });
       todoHead.createEl("button", { cls: "ohd-mini", text: "＋" }).addEventListener("click", () => void this.addTodoPrompt());
@@ -90,16 +117,9 @@ export class HomeView extends ItemView {
       this.todoEl = todo.createDiv({ cls: "ohd-todo" });
     }
 
-    // Vault-wide backlog
-    if (b("backlog")) {
-      const backlog = contentEl.createDiv({ cls: "ohd-section" });
-      backlog.createEl("div", { cls: "ohd-h2", text: "未完成任务 (全库)" });
-      this.backlogEl = backlog.createDiv({ cls: "ohd-todo" });
-    }
-
     // 全景看板 (原 Script-GlobalBoard 矩阵)
     if (b("board")) {
-      const board = contentEl.createDiv({ cls: "ohd-section ohd-board-section" });
+      const board = contentEl.createDiv({ cls: "ohd-section ohd-span-12 ohd-board-section" });
       const boardHead = board.createDiv({ cls: "ohd-h2" });
       boardHead.createSpan({ text: "全景看板 · 主线×领域" });
       boardHead.createEl("button", { cls: "ohd-mini", text: "🔄" }).addEventListener("click", () => void this.renderBoard());

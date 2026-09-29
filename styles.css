@@ -1,15 +1,29 @@
 /* Home Dashboard — 首页工作台。前缀 ohd- 避免与主题冲突。 */
 .ohd-home {
-  padding: 24px 28px;
-  max-width: 760px;
+  padding: 28px 32px 40px;
+  max-width: 860px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
 }
 
+/* 顶部 Hero：问候 + 日期 */
+.ohd-hero {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.ohd-hero-date { display: flex; flex-direction: column; gap: 2px; }
+.ohd-hero-greeting { font-size: 30px; font-weight: 800; line-height: 1.1; color: var(--text-normal); }
+.ohd-hero-meta { font-size: 14px; color: var(--text-muted); }
+.ohd-hero-tagline { font-size: 13px; color: var(--text-faint); max-width: 60%; }
+
 /* 顶部：logo + 搜索 */
-.ohd-head { display: flex; align-items: center; gap: 10px; }
+.ohd-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
 .ohd-logo { font-size: 22px; }
 .ohd-search {
   flex: 1;
@@ -23,7 +37,7 @@
 .ohd-search:focus { border-color: var(--interactive-accent); outline: none; }
 
 /* 三支柱导航 */
-.ohd-nav { display: flex; gap: 10px; flex-wrap: wrap; }
+.ohd-nav { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
 .ohd-pill {
   padding: 7px 18px;
   border-radius: 999px;
@@ -35,8 +49,23 @@
 }
 .ohd-pill:hover { border-color: var(--interactive-accent); color: var(--interactive-accent); }
 
-/* 区块 */
-.ohd-section { background: var(--background-secondary); border-radius: 12px; padding: 14px 16px; }
+/* 区块卡片 */
+.ohd-section {
+  background: var(--background-primary);
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--background-modifier-box-shadow) 18%, transparent);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ohd-span-6 { grid-column: span 6; }
+.ohd-span-7 { grid-column: span 7; }
+.ohd-span-5 { grid-column: span 5; }
+.ohd-span-8 { grid-column: span 8; }
+.ohd-span-4 { grid-column: span 4; }
+.ohd-span-12 { grid-column: 1 / -1; }
 .ohd-h2 {
   font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
   color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
