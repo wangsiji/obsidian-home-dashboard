@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-home-dashboard",
-	"name": "Home Dashboard",
-	"version": "0.1.0",
-	"minAppVersion": "1.4.0",
-	"description": "一个把 Obsidian 变命令中枢的首页工作台：今日待办、最近笔记、快捷入口、三支柱导航、全局搜索。",
-	"author": "wangsiji",
-	"authorUrl": "https://github.com/wangsiji",
+	"id": "qiaomu-home",
+	"name": "Qiaomu Home",
+	"version": "0.6.0",
+	"minAppVersion": "1.11.4",
+	"description": "A calm start page: search, create, and continue what you were reading, listening to, or asking.",
+	"author": "向阳乔木",
+	"authorUrl": "https://github.com/joeseesun",
 	"isDesktopOnly": false
 }

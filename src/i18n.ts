@@ -1,0 +1,315 @@
+import { getLanguage } from "obsidian";
+import de from "./locales/de.json";
+import es from "./locales/es.json";
+import fr from "./locales/fr.json";
+import ja from "./locales/ja.json";
+import ko from "./locales/ko.json";
+import pt from "./locales/pt.json";
+import ru from "./locales/ru.json";
+
+const zh = {
+  "brand": "乔木Home",
+  "view.title": "主页",
+  "cmd.open": "打开主页",
+  "cmd.focusSearch": "打开主页并搜索",
+  "cmd.nextWallpaper": "更换主页壁纸",
+  "ribbon.open": "打开乔木Home",
+  "greeting.night": "夜深了",
+  "greeting.morning": "早上好",
+  "greeting.noon": "中午好",
+  "greeting.afternoon": "下午好",
+  "greeting.evening": "晚上好",
+  "search.placeholder": "搜索笔记，或记下一个想法…",
+  "search.label": "搜索笔记或记录想法",
+  "search.clear": "清除搜索",
+  "search.notes": "笔记",
+  "search.fullText": "在全局搜索中查找「{q}」",
+  "search.ask": "问乔木 Agent：{q}",
+  "search.create": "新建笔记「{q}」",
+  "search.none": "没有匹配的笔记",
+  "search.hint.ask": "⌘↵ 问 Agent",
+  "search.capture": "记录到{target}：{q}",
+  "search.hint.capture": "⇧↵ 记录",
+  "capture.daily": "今日日记",
+  "capture.inbox": "Inbox",
+  "capture.saved": "已记入{target}",
+  "capture.failed": "记录失败：{message}",
+  "capture.badPath": "Inbox 路径须是库内 Markdown 文件",
+  "capture.noDaily": "请在「核心插件」中开启「日记」，然后重试",
+  "capture.badFile": "记录目标不是 Markdown 文件",
+  "new.note": "新笔记",
+  "new.more": "更多新建方式",
+  "menu.customize": "自定义此菜单…",
+  "settings.open": "主页设置",
+  "wallpaper.view": "在 Unsplash 查看这张照片",
+  "wallpaper.curated": "Unsplash 精选",
+  "wallpaper.unsplash": "Unsplash 搜索",
+  "wallpaper.local": "库中的图片",
+  "wallpaper.none": "不使用壁纸",
+  "wallpaper.settings": "壁纸设置…",
+  "new.daily": "今日日记",
+  "new.canvas": "白板",
+  "new.base": "数据库",
+  "new.folder": "文件夹",
+  "new.import": "导入文件",
+  "new.untitled": "未命名",
+  "section.recent": "最近笔记",
+  "section.recent.empty": "打开过的笔记会出现在这里",
+  "section.recommend": "乔木插件",
+  "recommend.install": "安装",
+  "recommend.enable": "启用",
+  "recommend.hide": "不再显示",
+  "recommend.installed": "已安装，未启用",
+  "library.title": "添加内容",
+  "library.target": "添加到「{name}」",
+  "library.search": "查找模块",
+  "library.searchHint": "搜索名称或插件",
+  "library.noResults": "没有找到匹配的模块",
+  "library.recent": "快速回到最近打开的笔记。",
+  "library.plugin": "来自已安装插件的内容。",
+  "library.add": "添加",
+  "library.added": "已添加",
+  "library.install": "前往插件市场",
+  "library.enable": "前往启用",
+  "library.needsPlugin": "需要安装来源插件",
+  "library.disabled": "需要先启用来源插件",
+  "layout.edit": "编辑布局",
+  "layout.done": "完成",
+  "layout.menu": "模块选项",
+  "layout.count": "显示条数",
+  "layout.move": "移动到页签",
+  "layout.remove": "从此页移除",
+  "layout.earlier": "前移",
+  "layout.later": "后移",
+  "layout.drag": "拖动排序",
+  "layout.saveFailed": "布局保存失败，请重试",
+  "layout.emptySource": "暂无内容，可打开来源插件查看",
+  "pages.rename": "重命名页签",
+  "shortcut.renameGroup": "重命名分组",
+  "pages.duplicate": "复制页签",
+  "pages.copyName": "{name} 副本",
+  "pages.menu": "页签选项",
+  "layout.singlePage": "先创建另一个页签，即可移动模块。",
+  "legacy.open": "打开",
+  "legacy.unavailable": "内容暂未连接，可打开插件后重试",
+  "legacy.incompatible": "当前接口不兼容，暂时可直接打开插件",
+  "legacy.retry": "重新连接",
+  "pages.default": "主页",
+  "pages.add": "新增页签",
+  "pages.name": "页签名称",
+  "pages.example": "例如：阅读、工作",
+  "pages.delete": "删除页签",
+  "pages.deleteConfirm": "删除「{name}」的主页布局？笔记和插件内容不会被删除。",
+  "pages.cancel": "取消",
+  "pages.configure": "配置此页内容",
+  "pages.empty": "此页还没有可显示的内容",
+  "pages.label": "主页页签",
+  "wallpaper.next": "换一张壁纸",
+  "wallpaper.credit": "{name} / Unsplash",
+  "error.source": "{name} 暂时无法显示",
+  "error.create": "无法创建：{message}",
+  "error.command": "这个命令当前不可用",
+  "error.import": "导入失败：{message}",
+  "notice.imported": "已导入 {n} 个文件",
+  "time.justNow": "刚刚",
+  "time.minutes": "{n} 分钟前",
+  "time.hours": "{n} 小时前",
+  "time.days": "{n} 天前",
+} as const;
+
+type Key = keyof typeof zh;
+
+const en: Record<Key, string> = {
+  "brand": "Qiaomu Home",
+  "view.title": "Home",
+  "cmd.open": "Open home",
+  "cmd.focusSearch": "Open home and search",
+  "cmd.nextWallpaper": "Change home wallpaper",
+  "ribbon.open": "Open Qiaomu Home",
+  "greeting.night": "Good night",
+  "greeting.morning": "Good morning",
+  "greeting.noon": "Good afternoon",
+  "greeting.afternoon": "Good afternoon",
+  "greeting.evening": "Good evening",
+  "search.placeholder": "Search notes, or capture a thought…",
+  "search.label": "Search notes or capture a thought",
+  "search.clear": "Clear search",
+  "search.notes": "Notes",
+  "search.fullText": "Search “{q}” in all files",
+  "search.ask": "Ask Qiaomu Agent: {q}",
+  "search.create": "Create note “{q}”",
+  "search.none": "No matching notes",
+  "search.hint.ask": "⌘↵ ask Agent",
+  "search.capture": "Capture in {target}: {q}",
+  "search.hint.capture": "⇧↵ capture",
+  "capture.daily": "today's note",
+  "capture.inbox": "Inbox",
+  "capture.saved": "Saved to {target}",
+  "capture.failed": "Capture failed: {message}",
+  "capture.badPath": "Inbox path must be a Markdown file inside the vault",
+  "capture.noDaily": "Enable Daily notes in Core plugins, then retry",
+  "capture.badFile": "Capture target is not a Markdown file",
+  "new.note": "New note",
+  "new.more": "More ways to create",
+  "menu.customize": "Customize this menu…",
+  "settings.open": "Home settings",
+  "wallpaper.view": "View this photo on Unsplash",
+  "wallpaper.curated": "Unsplash picks",
+  "wallpaper.unsplash": "Unsplash search",
+  "wallpaper.local": "Image from vault",
+  "wallpaper.none": "No wallpaper",
+  "wallpaper.settings": "Wallpaper settings…",
+  "new.daily": "Today",
+  "new.canvas": "Canvas",
+  "new.base": "Base",
+  "new.folder": "Folder",
+  "new.import": "Import",
+  "new.untitled": "Untitled",
+  "section.recent": "Recent notes",
+  "section.recent.empty": "Notes you open will appear here",
+  "section.recommend": "Qiaomu plugins",
+  "recommend.install": "Install",
+  "recommend.enable": "Enable",
+  "recommend.hide": "Hide",
+  "recommend.installed": "Installed, not enabled",
+  "library.title": "Add content",
+  "library.target": "Add to “{name}”",
+  "library.search": "Find a module",
+  "library.searchHint": "Search modules or plugins",
+  "library.noResults": "No matching modules",
+  "library.recent": "Return to your recently opened notes.",
+  "library.plugin": "Content from an installed plugin.",
+  "library.add": "Add",
+  "library.added": "Added",
+  "library.install": "View in community plugins",
+  "library.enable": "Enable in settings",
+  "library.needsPlugin": "Requires the source plugin",
+  "library.disabled": "Enable the source plugin first",
+  "layout.edit": "Edit layout",
+  "layout.done": "Done",
+  "layout.menu": "Module options",
+  "layout.count": "Number of items",
+  "layout.move": "Move to page",
+  "layout.remove": "Remove from this page",
+  "layout.earlier": "Move earlier",
+  "layout.later": "Move later",
+  "layout.drag": "Drag to reorder",
+  "layout.saveFailed": "Could not save the layout. Please retry.",
+  "layout.emptySource": "No content yet. Open the source plugin to continue.",
+  "pages.rename": "Rename page",
+  "shortcut.renameGroup": "Rename group",
+  "pages.duplicate": "Duplicate page",
+  "pages.copyName": "{name} copy",
+  "pages.menu": "Page options",
+  "layout.singlePage": "Create another page to move this module.",
+  "legacy.open": "Open",
+  "legacy.unavailable": "Content is not connected yet. Open the plugin or retry.",
+  "legacy.incompatible": "This interface is not compatible. You can still open the plugin.",
+  "legacy.retry": "Reconnect",
+  "pages.default": "Home",
+  "pages.add": "Add page",
+  "pages.name": "Page name",
+  "pages.example": "For example: Reading, Work",
+  "pages.delete": "Delete page",
+  "pages.deleteConfirm": "Delete the “{name}” layout? Notes and plugin content will be kept.",
+  "pages.cancel": "Cancel",
+  "pages.configure": "Choose content for this page",
+  "pages.empty": "No content to show on this page yet",
+  "pages.label": "Home pages",
+  "wallpaper.next": "Next wallpaper",
+  "wallpaper.credit": "{name} / Unsplash",
+  "error.source": "{name} is unavailable right now",
+  "error.create": "Could not create: {message}",
+  "error.command": "This command is not available right now",
+  "error.import": "Import failed: {message}",
+  "notice.imported": "Imported {n} files",
+  "time.justNow": "just now",
+  "time.minutes": "{n} min ago",
+  "time.hours": "{n} h ago",
+  "time.days": "{n} d ago",
+};
+
+/** Languages Home ships. Chinese and English live in source; the rest are keyed by the English text. */
+export const LANGUAGES = [
+  { id: "zh", name: "简体中文", locale: "zh-CN" },
+  { id: "en", name: "English", locale: "en" },
+  { id: "ja", name: "日本語", locale: "ja-JP" },
+  { id: "ko", name: "한국어", locale: "ko-KR" },
+  { id: "fr", name: "Français", locale: "fr-FR" },
+  { id: "de", name: "Deutsch", locale: "de-DE" },
+  { id: "es", name: "Español", locale: "es-ES" },
+  { id: "pt", name: "Português", locale: "pt-BR" },
+  { id: "ru", name: "Русский", locale: "ru-RU" },
+] as const;
+export type Language = typeof LANGUAGES[number]["id"];
+export type LanguagePreference = Language | "auto";
+
+const TRANSLATIONS: Record<Exclude<Language, "zh" | "en">, Record<string, string>> = { ja, ko, fr, de, es, pt, ru };
+let preference: LanguagePreference = "auto";
+
+export function isLanguage(value: unknown): value is Language {
+  return LANGUAGES.some((item) => item.id === value);
+}
+
+/** Map Obsidian's interface language ("zh-TW", "pt-BR", …) to a shipped language; anything else reads English. */
+export function languageFromObsidian(code: string): Language {
+  const base = code.toLowerCase().split(/[-_]/)[0];
+  return isLanguage(base) ? base : "en";
+}
+
+export function setLanguage(value: LanguagePreference): void {
+  preference = value === "auto" || isLanguage(value) ? value : "auto";
+}
+
+export function currentLanguage(): Language {
+  if (preference !== "auto") return preference;
+  try { return languageFromObsidian(getLanguage()); }
+  catch { return "zh"; }
+}
+
+/** BCP 47 tag for dates and numbers in the current language. */
+export function dateLocale(): string {
+  const id = currentLanguage();
+  return LANGUAGES.find((item) => item.id === id)!.locale;
+}
+
+export function isChinese(): boolean {
+  return currentLanguage() === "zh";
+}
+
+function format(template: string, vars?: Record<string, string | number>): string {
+  return vars ? template.replace(/\{(\w+)\}/g, (match, name: string) => name in vars ? String(vars[name]) : match) : template;
+}
+
+/** Translate English source text; untranslated text falls back to English. */
+export function translate(english: string, language = currentLanguage()): string {
+  if (language === "zh" || language === "en") return english;
+  return TRANSLATIONS[language][english] || english;
+}
+
+/** Inline text: Chinese and English written at the call site, other languages looked up by the English. */
+export function L(zh: string, en: string, vars?: Record<string, string | number>): string {
+  const language = currentLanguage();
+  return format(language === "zh" ? zh : translate(en, language), vars);
+}
+
+export function t(key: Key, vars: Record<string, string | number> = {}): string {
+  return L(zh[key], en[key], vars);
+}
+
+export function greeting(hour: number): string {
+  if (hour < 5) return t("greeting.night");
+  if (hour < 11) return t("greeting.morning");
+  if (hour < 13) return t("greeting.noon");
+  if (hour < 18) return t("greeting.afternoon");
+  return t("greeting.evening");
+}
+
+export function relativeTime(then: number, now = Date.now()): string {
+  const minutes = Math.floor((now - then) / 60_000);
+  if (minutes < 1) return t("time.justNow");
+  if (minutes < 60) return t("time.minutes", { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t("time.hours", { n: hours });
+  return t("time.days", { n: Math.floor(hours / 24) });
+}

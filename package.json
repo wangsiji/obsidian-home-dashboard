@@ -1,18 +1,26 @@
 {
-	"name": "obsidian-home-dashboard",
-	"version": "0.1.0",
-	"description": "把 Obsidian 变成命令中枢的首页工作台：今日待办、最近笔记、快捷入口、三支柱导航、搜索。",
-	"license": "GPL-3.0-only",
-	"private": true,
-	"scripts": {
-		"dev": "node esbuild.config.mjs",
-		"build": "tsc --noEmit && node esbuild.config.mjs production",
-		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"@types/node": "^20.11.0",
-		"esbuild": "^0.24.0",
-		"obsidian": "^1.6.0",
-		"typescript": "^5.4.0"
-	}
+  "name": "qiaomu-home",
+  "version": "0.6.0",
+  "description": "A calm start page for Obsidian: search, create, and continue what you were reading, listening to, or asking.",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "scripts": {
+    "dev": "node esbuild.config.mjs --watch",
+    "build": "tsc --noEmit && node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "i18n:strings": "node scripts/i18n-strings.mjs",
+    "check": "npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.4.2",
+    "jsdom": "^30.0.1",
+    "obsidian": "^1.13.1",
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.0"
+  }
 }
