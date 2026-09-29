@@ -75,3 +75,15 @@
 }
 .ohd-bfolder:first-child { margin-top: 0; }
 .ohd-bfolder:hover { text-decoration: underline; }
+
+/* 全景看板矩阵（复现自原 Script-GlobalBoard） */
+.ohd-board-section { overflow: hidden; }
+.ohd-board-wrap { overflow-x: auto; }
+.ohd-board .ohd-matrix a.internal-link { border-bottom: none; box-shadow: none; }
+.ohd-board .ohd-matrix a.internal-link:hover { filter: brightness(.9); text-decoration: underline; }
+.ohd-board thead th {
+  padding: 8px 10px; background: color-mix(in srgb, var(--background-modifier-border) 16%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
+}
+.ohd-board td { padding: 7px 10px; }
+.ohd-board tr:last-child td { border-bottom: none !important; }

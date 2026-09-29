@@ -1,6 +1,7 @@
 import { ItemView, Notice, TFile, WorkspaceLeaf, normalizePath, type App } from "obsidian";
 import { appendLine, ensureTodayNote, todayPath } from "./daily";
-import type { HomeSettings, QuickLink } from "./settings";
+import type { HomeSettings } from "./settings";
+import { buildBoard, renderBoardMatrix, quickTargets } from "./board";
 
 export const HOME_VIEW_TYPE = "obsidian-home-dashboard";
 
@@ -25,6 +26,7 @@ export class HomeView extends ItemView {
   private backlogEl!: HTMLElement;
   private recentEl!: HTMLElement;
   private quickEl!: HTMLElement;
+  private boardEl!: HTMLElement;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -63,10 +65,10 @@ export class HomeView extends ItemView {
     recent.createEl("div", { cls: "ohd-h2", text: "最近笔记" });
     this.recentEl = recent.createDiv({ cls: "ohd-list" });
 
-    // Quick links
-    const quick = contentEl.createDiv({ cls: "ohd-section" });
-    quick.createEl("div", { cls: "ohd-h2", text: "快捷入口" });
-    this.quickEl = quick.createDiv({ cls: "ohd-chips" });
+    // Quick links (原 Script-GlobalBoard 快捷面板)
+      const quick = contentEl.createDiv({ cls: "ohd-section" });
+      quick.createEl("div", { cls: "ohd-h2", text: "快捷面板" });
+      this.quickEl = quick.createDiv({ cls: "ohd-chips" });
 
     // Today's todos
     const todo = contentEl.createDiv({ cls: "ohd-section" });
@@ -81,9 +83,16 @@ export class HomeView extends ItemView {
     backlog.createEl("div", { cls: "ohd-h2", text: "未完成任务 (全库)" });
     this.backlogEl = backlog.createDiv({ cls: "ohd-todo" });
 
+    // 全景看板 (原 Script-GlobalBoard 矩阵)
+    const board = contentEl.createDiv({ cls: "ohd-section ohd-board-section" });
+    const boardHead = board.createDiv({ cls: "ohd-h2" });
+    boardHead.createSpan({ text: "全景看板 · 主线×领域" });
+    boardHead.createEl("button", { cls: "ohd-mini", text: "🔄" }).addEventListener("click", () => void this.renderBoard());
+    this.boardEl = board.createDiv({ cls: "ohd-board" });
+
     // Live updates
-    this.registerEvent(this.app.vault.on("modify", () => void this.renderTodo().then(() => this.renderBacklog())));
-    this.registerEvent(this.app.vault.on("create", () => void this.renderRecent().then(() => this.renderBacklog())));
+    this.registerEvent(this.app.vault.on("modify", () => void Promise.all([this.renderTodo(), this.renderBacklog(), this.renderBoard()])));
+    this.registerEvent(this.app.vault.on("create", () => void Promise.all([this.renderRecent(), this.renderBacklog(), this.renderBoard()])));
     this.registerEvent(this.app.workspace.on("layout-change", () => void this.renderRecent()));
 
     // Initial render
@@ -94,9 +103,8 @@ export class HomeView extends ItemView {
 
   /** Re-render the whole body. Called when the plugin re-reads settings. */
   async renderAll(): Promise<void> {
-    const s = this.getSettings();
-    this.renderQuick(s.quickLinks);
-    await Promise.all([this.renderRecent(), this.renderTodo(), this.renderBacklog()]);
+    this.renderQuick();
+    await Promise.all([this.renderRecent(), this.renderTodo(), this.renderBacklog(), this.renderBoard()]);
   }
 
   /** Focus the search bar (used by the "capture" command). */
@@ -121,12 +129,20 @@ export class HomeView extends ItemView {
     }
   }
 
-  private renderQuick(links: QuickLink[]): void {
+  private renderQuick(): void {
     this.quickEl.empty();
-    for (const link of links) {
-      const chip = this.quickEl.createEl("button", { cls: "ohd-chip", text: `${link.label} → ${link.target}` });
-      chip.addEventListener("click", () => void this.openTarget(link.target));
+    const targets = quickTargets();
+    for (const [label, target] of Object.entries(targets)) {
+      const chip = this.quickEl.createEl("button", { cls: "ohd-chip", text: label });
+      chip.addClass("ohd-chip-nav");
+      chip.addEventListener("click", () => void this.openQuickTarget(target));
     }
+  }
+
+  /** 打开快捷面板目标：http(s) 用窗口，其余按笔记/文件夹解析。 */
+  private async openQuickTarget(target: string): Promise<void> {
+    if (/^https?:\/\//i.test(target)) { window.open(target); return; }
+    await this.openPathSafe(target);
   }
 
   private async renderTodo(): Promise<void> {
@@ -221,6 +237,48 @@ export class HomeView extends ItemView {
     }
     const extra = tasks.length - top.reduce((n, [, items]) => n + items.length, 0);
     if (extra > 0) this.backlogEl.createSpan({ cls: "ohd-hint", text: `…还有 ${extra} 条在其他目录` });
+  }
+
+  /** 渲染全景看板矩阵（buildBoard 全库采集 → HTML 注入 → 绑定跳转）。 */
+  private async renderBoard(): Promise<void> {
+    this.boardEl.empty();
+    this.boardEl.createSpan({ cls: "ohd-hint", text: "扫描中…" });
+    try {
+      const model = await buildBoard(this.app);
+      this.boardEl.empty();
+      this.boardEl.innerHTML = renderBoardMatrix(model);
+      // 绑定内部链接点击 → 打开笔记/文件夹（matrix 用原生 data-href；任务行另有 data-task-line，单独处理）
+      this.boardEl.querySelectorAll("a.internal-link[data-href]:not([data-task-line])").forEach((a) => {
+        a.addEventListener("click", (e) => this.onBoardLink(e, a as HTMLAnchorElement));
+      });
+      this.boardEl.querySelectorAll("a.internal-link[data-task-line]").forEach((a) => {
+        a.addEventListener("click", (e) => this.onBoardTaskClick(e, a as HTMLAnchorElement));
+      });
+    } catch (err) {
+      this.boardEl.empty();
+      this.boardEl.createSpan({ cls: "ohd-hint", text: `全景看板加载失败（多见结构不符）：${err instanceof Error ? err.message : err}` });
+    }
+  }
+
+  /** 矩阵内部链接点击：打开笔记/文件夹/锚点。 */
+  private async onBoardLink(e: Event, a: HTMLAnchorElement): Promise<void> {
+    e.preventDefault(); e.stopPropagation();
+    const href = a.getAttribute("data-href") || "";
+    await this.openPathSafe(href);
+  }
+
+  /** 矩阵任务行点击：打开笔记并跳到任务所在行。 */
+  private async onBoardTaskClick(e: Event, a: HTMLAnchorElement): Promise<void> {
+    e.preventDefault(); e.stopPropagation();
+    const href = a.getAttribute("data-href") || "";
+    const rawLine = a.getAttribute("data-task-line");
+    const line = rawLine == null || rawLine === "" ? null : parseInt(rawLine, 10);
+    const file = this.app.vault.getAbstractFileByPath(normalizePath(href.split("#")[0]));
+    if (file instanceof TFile) {
+      await this.app.workspace.getLeaf().openFile(file, { active: true, eState: line == null ? undefined : { line } });
+    } else {
+      new Notice(`找不到：${href}`);
+    }
   }
 
   /** Open a note and jump the editor cursor to the task's line. */
