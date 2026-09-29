@@ -87,3 +87,19 @@
 }
 .ohd-board td { padding: 7px 10px; }
 .ohd-board tr:last-child td { border-bottom: none !important; }
+
+/* 统计头 KPI 卡片（全景看板上方） */
+.ohd-kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.ohd-kpi-card {
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 55%, transparent);
+  border-radius: 10px; padding: 12px 14px; background: var(--background-primary);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--background-modifier-box-shadow) 25%, transparent);
+}
+.ohd-kpi-name { font-size: 13px; font-weight: 650; color: var(--text-normal); display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.ohd-kpi-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.ohd-kpi-main { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.ohd-kpi-num { font-size: 26px; font-weight: 800; line-height: 1; }
+.ohd-kpi-label { font-size: 12px; color: var(--text-muted); }
+.ohd-kpi-bar { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--background-modifier-border) 40%, transparent); overflow: hidden; margin-bottom: 8px; }
+.ohd-kpi-bar i { display: block; height: 100%; border-radius: 3px; transition: width .4s ease; }
+.ohd-kpi-sub { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }

@@ -265,11 +265,25 @@ export async function buildBoard(app: App): Promise<BoardModel> {
 }
 
 /* ── 渲染 ── */
+/* ── 渲染 ── */
 export function renderBoardMatrix(model: BoardModel): string {
   const { areas, pills } = model;
   const pillarOf = (p: string) => pills.find(x => x.code === p) ?? pills[0];
   const countByPillar: Record<string, number> = {};
   areas.forEach(a => { countByPillar[a.pillar] = (countByPillar[a.pillar] || 0) + 1; });
+
+  // 统计头：按主线聚合（今天待办、进行中项目、里程碑完成率、作品）
+  const kpiCards = pills.map(pil => {
+    const as = areas.filter(a => a.pillar === pil.code);
+    const sum = (fn: (a: Area) => number) => as.reduce((t, a) => t + fn(a), 0);
+    const projects = sum(a => a.projects.filter(p => p.status !== 'done').length);
+    const todayN = sum(a => a.taskToday.length);
+    const worksN = sum(a => a.works.length);
+    const msDone = sum(a => a.milestones.filter(m => m.done).length);
+    const msAll = sum(a => a.milestones.length);
+    const pct = msAll ? Math.round((msDone / msAll) * 100) : 0;
+    return { pil, as: as.length, projects, todayN, worksN, pct, ms: msAll };
+  });
 
   let rows = '';
   let lastPillar: string | null = null;
@@ -317,12 +331,23 @@ export function renderBoardMatrix(model: BoardModel): string {
     </tr>`;
   }
 
-  return `<div class="ohd-board-wrap" style="overflow-x:auto">
-    <table class="ohd-matrix" style="width:100%;border-collapse:separate;border-spacing:0;min-width:640px;table-layout:fixed">
-      <colgroup>${COLS.map(w => `<col style="width:${w}%">`).join('')}</colgroup>
-      <thead><tr>${['主线','领域','里程碑','项目','任务','作品','回顾'].map(h => `<th style="text-align:left;font-size:${FONT.sm};font-weight:700;letter-spacing:.5px">${h}</th>`).join('')}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+  const kpiHtml = `<div class="ohd-kpi">${kpiCards.map(k => {
+      const c = k.pil.color;
+      return `<div class="ohd-kpi-card" style="--kpi:${c}">
+        <div class="ohd-kpi-name"><span class="ohd-kpi-dot" style="background:${c}"></span>${k.pil.name}</div>
+        <div class="ohd-kpi-main"><span class="ohd-kpi-num" style="color:${c}">${k.projects}</span><span class="ohd-kpi-label">项目</span></div>
+        <div class="ohd-kpi-bar"><i style="width:${k.pct}%;background:${c}"></i></div>
+        <div class="ohd-kpi-sub"><span>${k.pct}% 里程碑 • ${k.todayN} 今日</span><span>${k.ms} 里程碑 · ${k.as} 领域</span></div>
+      </div>`;
+    }).join('')}</div>`;
+
+    return `<div class="ohd-board-wrap" style="overflow-x:auto">
+      ${kpiHtml}
+      <table class="ohd-matrix" style="width:100%;border-collapse:separate;border-spacing:0;min-width:640px;table-layout:fixed">
+        <colgroup>${COLS.map(w => `<col style="width:${w}%">`).join('')}</colgroup>
+        <thead><tr>${['主线','领域','里程碑','项目','任务','作品','回顾'].map(h => `<th style="text-align:left;font-size:${FONT.sm};font-weight:700;letter-spacing:.5px">${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
   </div>`;
 }
 
