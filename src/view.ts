@@ -22,6 +22,7 @@ function findSection(content: string, title: string): { start: number; end: numb
 export class HomeView extends ItemView {
   private searchEl!: HTMLInputElement;
   private todoEl!: HTMLElement;
+  private backlogEl!: HTMLElement;
   private recentEl!: HTMLElement;
   private quickEl!: HTMLElement;
 
@@ -75,9 +76,14 @@ export class HomeView extends ItemView {
     todoHead.createEl("button", { cls: "ohd-mini", text: "📄" }).addEventListener("click", () => void this.openTodayNote());
     this.todoEl = todo.createDiv({ cls: "ohd-todo" });
 
+    // Vault-wide backlog
+    const backlog = contentEl.createDiv({ cls: "ohd-section" });
+    backlog.createEl("div", { cls: "ohd-h2", text: "未完成任务 (全库)" });
+    this.backlogEl = backlog.createDiv({ cls: "ohd-todo" });
+
     // Live updates
-    this.registerEvent(this.app.vault.on("modify", () => void this.renderTodo()));
-    this.registerEvent(this.app.vault.on("create", () => void this.renderRecent()));
+    this.registerEvent(this.app.vault.on("modify", () => void this.renderTodo().then(() => this.renderBacklog())));
+    this.registerEvent(this.app.vault.on("create", () => void this.renderRecent().then(() => this.renderBacklog())));
     this.registerEvent(this.app.workspace.on("layout-change", () => void this.renderRecent()));
 
     // Initial render
@@ -90,7 +96,7 @@ export class HomeView extends ItemView {
   async renderAll(): Promise<void> {
     const s = this.getSettings();
     this.renderQuick(s.quickLinks);
-    await Promise.all([this.renderRecent(), this.renderTodo()]);
+    await Promise.all([this.renderRecent(), this.renderTodo(), this.renderBacklog()]);
   }
 
   /** Focus the search bar (used by the "capture" command). */
@@ -164,6 +170,68 @@ export class HomeView extends ItemView {
       return lines.join("\n");
     });
     void this.renderTodo();
+    void this.renderBacklog();
+  }
+
+  /** Collect every open `- [ ]` task across the vault with its file + line. */
+  private async getOpenTasks(): Promise<Array<{ file: TFile; line: number; text: string }>> {
+    const out: Array<{ file: TFile; line: number; text: string }> = [];
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      if (file.path.startsWith(".obsidian")) continue;
+      const content = await this.app.vault.cachedRead(file);
+      if (content.indexOf("[ ]") === -1) continue;
+      const lines = content.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        const m = taskRe.exec(lines[i]);
+        if (m && m[2] !== "x" && m[2] !== "X") out.push({ file, line: i, text: m[3] });
+      }
+    }
+    return out;
+  }
+
+  /** Render vault-wide unfinished tasks, grouped by top-level folder, capped for readability. */
+  private async renderBacklog(): Promise<void> {
+    const tasks = await this.getOpenTasks();
+    this.backlogEl.empty();
+    if (tasks.length === 0) {
+      this.backlogEl.createSpan({ cls: "ohd-hint", text: "全库没有未完成任务 🎉" });
+      return;
+    }
+    const cap = 6; // folders per screen; skip the rest silently (one-glance rule)
+    const byFolder = new Map<string, typeof tasks>();
+    for (const t of tasks) {
+      const root = t.file.path.split("/")[0];
+      const key = root === t.file.basename && (root === "10-健康" || root === "20-生活" || root === "30-价值") ? "支柱" : root;
+      if (!byFolder.has(key)) byFolder.set(key, []);
+      byFolder.get(key)!.push(t);
+    }
+    const top = [...byFolder.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, cap);
+    for (const [folder, items] of top) {
+      const head = this.backlogEl.createDiv({ cls: "ohd-bfolder", text: `${folder} · ${items.length}` });
+      head.addEventListener("click", () => void this.openFolder(folder));
+      const shown = items.slice(0, 5);
+      for (const t of shown) {
+        const row = this.backlogEl.createDiv({ cls: "ohd-row" });
+        const box = row.createEl("input", { type: "checkbox", cls: "ohd-check" });
+        box.addEventListener("change", () => void this.toggleTodo(t.file, t.line, box.checked));
+        row.createSpan({ cls: "ohd-fname", text: t.text });
+        row.createSpan({ cls: "ohd-fpath", text: t.file.basename });
+        row.addEventListener("click", () => void this.openTask(t.file, t.line));
+      }
+    }
+    const extra = tasks.length - top.reduce((n, [, items]) => n + items.length, 0);
+    if (extra > 0) this.backlogEl.createSpan({ cls: "ohd-hint", text: `…还有 ${extra} 条在其他目录` });
+  }
+
+  /** Open a note and jump the editor cursor to the task's line. */
+  private async openTask(file: TFile, line: number): Promise<void> {
+    await this.app.workspace.getLeaf().openFile(file, { active: true, eState: { line } });
+  }
+
+  /** Open a vault-global search scoped to a top-level folder. */
+  private async openFolder(folder: string): Promise<void> {
+    const leaf = this.app.workspace.getLeaf("tab");
+    await leaf.setViewState({ type: "search", state: { query: `path:"${folder}/"` } });
   }
 
   private async openNote(path: string): Promise<void> {

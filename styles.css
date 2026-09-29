@@ -69,3 +69,9 @@
 
 .ohd-todo { display: flex; flex-direction: column; gap: 4px; }
 .ohd-hint { color: var(--text-faint); font-size: 13px; }
+.ohd-bfolder {
+  font-size: 12px; font-weight: 600; color: var(--text-accent);
+  padding: 2px 4px 2px 0; margin-top: 4px; cursor: pointer; letter-spacing: .02em;
+}
+.ohd-bfolder:first-child { margin-top: 0; }
+.ohd-bfolder:hover { text-decoration: underline; }
