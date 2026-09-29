@@ -17,9 +17,9 @@ const COLS = [5, 8, 25, 16, 26, 15, 5];
 
 /* ── 主线 + 领域配置（源自原脚本，硬编码 wsj 库结构） ── */
 const PILLARS = [
-  { code: '10-健康', name: '健康', icon: 'heart', color: C.green },
-  { code: '20-生活', name: '生活', icon: 'home', color: C.blue },
-  { code: '30-价值', name: '价值', icon: 'gem', color: C.purple },
+  { code: '10-健康', name: '健康', icon: 'heart', color: C.green, desc: '' },
+  { code: '20-生活', name: '生活', icon: 'home', color: C.blue, desc: '' },
+  { code: '30-价值', name: '价值', icon: 'gem', color: C.purple, desc: '' },
 ];
 
 /* ── 纯工具函数 ── */
@@ -151,7 +151,7 @@ async function scanFolder(app: App, folder: string): Promise<Array<{ page: Page;
 
 /* ── 模型类型 ── */
 export interface Area {
-  code: string; name: string; short: string;
+  code: string; name: string; short: string; desc: string;
   pillar: string;
   projects: Array<{ name: string; path: string; status: string; priority: string; milestones: Array<{ text: string; done: boolean; due: string }> }>;
   milestones: Array<{ text: string; done: boolean; due: string; project: string; projectPath: string }>;
@@ -171,6 +171,7 @@ export async function buildBoard(app: App): Promise<BoardModel> {
     code: page.basename,
     name: page.name || page.basename,
     short: (page.name || page.basename).replace(/^\d+-\s*/, ''),
+    desc: page.description || '',
     pillar: page.category[0] || '',
     projects: [], milestones: [], works: [],
     taskToday: [], review: null,
@@ -254,6 +255,12 @@ export async function buildBoard(app: App): Promise<BoardModel> {
     a.review = best;
   }
 
+  // 主线描述：读 vault 根笔记（10-健康.md 等）的 description
+  for (const p of PILLARS) {
+    const fm = cacheFrontmatter(app, p.code + '.md');
+    if (typeof fm.description === 'string') p.desc = fm.description;
+  }
+
   return { areas, pills: PILLARS };
 }
 
@@ -273,7 +280,7 @@ export function renderBoardMatrix(model: BoardModel): string {
     const border = 'border-bottom:1px solid color-mix(in srgb,var(--background-modifier-border) 24%,transparent)';
 
     const pillarCell = firstOfPillar
-      ? `<td rowspan="${Math.max(1, countByPillar[a.pillar])}" style="white-space:nowrap;vertical-align:middle;text-align:center;background:color-mix(in srgb,${pil.color} 2%,transparent);box-shadow:inset 2px 0 0 color-mix(in srgb,${pil.color} 65%,transparent);${border}"><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="color:${pil.color};font-size:${FONT.base};font-weight:750">${pil.name}</span></div></td>`
+      ? `<td rowspan="${Math.max(1, countByPillar[a.pillar])}" style="white-space:nowrap;vertical-align:middle;text-align:center;background:color-mix(in srgb,${pil.color} 2%,transparent);box-shadow:inset 2px 0 0 color-mix(in srgb,${pil.color} 65%,transparent);${border}"><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="color:${pil.color};font-size:${FONT.base};font-weight:750">${pil.name}</span>${pil.desc ? `<span style="font-size:${FONT.xs};color:var(--text-muted);max-width:110px;line-height:1.4">${esc(pil.desc)}</span>` : ''}</div></td>`
       : '';
 
     const goalHtml = a.milestones.length ? a.milestones.map(m => {
@@ -301,7 +308,7 @@ export function renderBoardMatrix(model: BoardModel): string {
 
     rows += `<tr style="vertical-align:top">
       ${pillarCell}
-      <td style="${border}white-space:nowrap"><a class="internal-link" data-href="${esc(a.code)}" href="${esc(a.code)}" style="font-size:${FONT.base};font-weight:650;color:${pil.color};text-decoration:none">${a.short}</a></td>
+      <td style="${border}white-space:nowrap"><a class="internal-link" data-href="${esc(a.code)}" href="${esc(a.code)}" style="font-size:${FONT.base};font-weight:650;color:${pil.color};text-decoration:none">${a.short}</a>${a.desc ? `<div style="font-size:${FONT.xs};color:var(--text-muted);margin-top:3px;max-width:130px;line-height:1.4">${esc(a.desc)}</div>` : ''}</td>
       <td style="${border}">${goalHtml}</td>
       <td style="${border};border-left:1px solid color-mix(in srgb,var(--background-modifier-border) 24%,transparent)">${projHtml}</td>
       <td style="${border};border-left:1px solid color-mix(in srgb,var(--background-modifier-border) 24%,transparent)">${taskHtml}</td>
